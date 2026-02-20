@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个性化旅行助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>  <!--引入Tailwind CSS框架-->
+    <script src="https://cdn.jsdelivr.net/npm/marked@2.1.3/lib/marked.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">  <!--引入font-awesome矢量图标库-->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">  <!--引入 Google Fonts 中的 Inter 字体-->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>  <!--引入 Vue.js 前端框架的 CDN 文件-->
+    <script src="https://cdn.jsdelivr.net/npm/axios@0.24.0/dist/axios.min.js"></script><!--引入Axios用于发送 HTTP 请求，与后端通信-->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        secondary: '#F7931E',
+                        accent: '#FFD23F',
+                        'gray-pink': '#F8F4F7',
+                        'neutral-dark': '#E8E8E8',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.4s ease-out',
+                        'pulse-soft': 'pulse 2s infinite',
+                        'float': 'float 5s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(15px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(25px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-8px)' }
+                        }
+                    }
+                }
+            }
+        }
+   </script>
+<style type="text/tailwindcss">
+    @layer utilities {
+        .content-auto { content-visibility: auto; }
+        .gradient-text {
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 50%, #FFD23F 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .custom-slider {
+            appearance: none;
+            height: 8px;
+            background: #E8E8E8;
+            border-radius: 4px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .custom-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #333;
+            background: #FFF;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .custom-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .left-panel { background: linear-gradient(145deg, #F8F4F7 0%, #F0E6EF 100%); box-shadow: inset 0 0 20px rgba(248, 244, 247, 0.5); }
+        .right-panel { background: linear-gradient(145deg, #FFFFFF 0%, #FDFDFD 100%); box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .generate-button {
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.3);
+            transition: all 0.3s ease;
+        }
+        .generate-button:hover { box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4); transform: translateY(-2px); }
+        .chat-input {
+            background: #FFFFFF;
+            border: 2px solid #E8E8E8;
+            border-radius: 24px;
+            transition: all 0.3s ease;
+        }
+        .chat-input:focus {
+            border-color: #FF6B35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+            outline: none;
+        }
+        .personality-input {
+            background: #FFFFFF;
+            border: 2px solid #E8E8E8;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        .personality-input:focus {
+            border-color: #FF6B35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+            outline: none;
+        }
+        .chat-message { max-width: 80%; word-wrap: break-word; padding: 12px 18px; border-radius: 18px; margin-bottom: 8px; }
+        .user-message { background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%); color: white; border-radius: 18px 18px 4px 18px; margin-left: auto; }
+        .ai-message { background: #F8F9FA; color: #333; border-radius: 18px 18px 18px 4px; border: 1px solid #E9ECEF; margin-right: auto; }
+        .typing-indicator { display: inline-flex; align-items: center; gap: 4px; }
+        .typing-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; animation: bounce 1.4s infinite both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    }
+    
+    /* 行程内容滚动容器（放在@layer utilities外面） */
+    .itinerary-content-container {
+        height: 100%;
+  max-height: none;
+  overflow-y: auto;
+  min-height: 0;
+    }
+    
+    /* 自定义滚动条样式 */
+    .itinerary-content-container::-webkit-scrollbar {
+        width: 8px !important;
+    }
+    
+    .itinerary-content-container::-webkit-scrollbar-track {
+        background: #f1f1f1 !important;
+        border-radius: 4px !important;
+        margin: 4px 0 !important;
+    }
+    
+    .itinerary-content-container::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%) !important;
+        border-radius: 4px !important;
+        border: 2px solid #f1f1f1 !important;
+    }
+    
+    .itinerary-content-container::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #F7931E 0%, #FF6B35 100%) !important;
+    }
+    
+    /* Firefox滚动条样式 */
+    .itinerary-content-container {
+        scrollbar-width: thin !important;
+        scrollbar-color: #FF6B35 #f1f1f1 !important;
+    }
+    
+    /* 响应式调整 */
+    @media (max-height: 800px) {
+        .itinerary-content-container {
+            max-height: 400px !important;
+        }
+    }
+    
+    @media (max-height: 600px) {
+        .itinerary-content-container {
+            max-height: 300px !important;
+        }
+    }
+    
+    /* 确保行程内容不被隐藏 */
+    #itinerary-display-container {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: relative !important;
+    }
+    
+    #itinerary-display-container * {
+        opacity: 1 !important;
+        visibility: visible !important;
+        color: #333 !important;
+    }
+    
+    /* 确保h1-h3标签可见 */
+    #itinerary-display-container h1,
+    #itinerary-display-container h2,
+    #itinerary-display-container h3 {
+        color: #333 !important;
+    }
+    
+    /* 确保列表可见 */
+    #itinerary-display-container ul,
+    #itinerary-display-container li {
+        margin-bottom: 0.5em !important;
+    }
+</style>
+</head>
+<body class="font-inter">
+    <div id="app">
+        <!-- Header -->
+        <header class="relative overflow-hidden bg-white shadow-sm">
+            <div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/10"></div>
+            <div class="relative container mx-auto px-6 py-8">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4 animate-fade-in">
+                        <div class="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-xl animate-float">
+                            <i class="fa fa-compass text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">个性化旅行助手</h1>
+                            <p class="text-gray-600">让行程推荐贴合你的独特风格</p>
+                        </div>
+                    </div>
+                    <div class="hidden md:flex items-center space-x-6 animate-slide-up">
+                        <button class="text-gray-600 hover:text-primary transition-colors duration-300 font-medium">
+                            <i class="fa fa-question-circle mr-2"></i>帮助
+                        </button>
+                        <button class="text-gray-600 hover:text-primary transition-colors duration-300 font-medium" @click="getHistory">
+                            <i class="fa fa-history mr-2"></i>历史记录
+                        </button>
+                        <button class="bg-gradient-to-r from-primary to-secondary text-white px-8 py-3 rounded-xl font-semibold hover:from-secondary hover:to-primary transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105" @click="saveProfile">
+                            <i class="fa fa-save mr-2"></i>保存
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Session 1: Big Five Test (BFI-10) -->
+<main v-if="session === 'bfi10'" class="container mx-auto px-6 py-12">
+  <div class="max-w-3xl mx-auto right-panel rounded-3xl p-8 animate-slide-up">
+    <h2 class="text-3xl font-bold gradient-text mb-2">大五人格测试</h2>
+    <p class="text-gray-600 mb-8">
+      为了更好的获取个性化旅行规划，请让我们用1分钟时间了解你～
+    </p>
+
+    <div class="space-y-6">
+      <div v-for="(item, idx) in bfi10.items"
+           :key="item.id"
+           class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <div class="flex items-start justify-between gap-4 mb-4">
+          <div class="font-semibold text-gray-900">
+            Q{{ item.id }}. {{ item.text }}
+          </div>
+          <div class="text-sm text-gray-500">
+            程度打分: {{ bfi10.answers[idx] }} <span v-if="bfi10.touched[idx]">✅</span>
+          </div>
+        </div>
+
+        <div class="flex justify-between text-sm text-gray-600 mb-2">
+          <span>非常不同意 (1)</span>
+          <span>非常同意 (5)</span>
+        </div>
+
+        <input type="range"
+               min="1" max="5" step="1"
+               class="w-full custom-slider"
+               v-model.number="bfi10.answers[idx]"
+               @input="onBfi10Input(idx)">
+      </div>
+    </div>
+
+    <button class="mt-8 w-full generate-button text-white py-4 px-6 rounded-lg font-bold text-lg"
+            :disabled="!bfi10Complete"
+            :class="!bfi10Complete ? 'opacity-50 cursor-not-allowed' : ''"
+            @click="finishBfi10">
+      完成 ({{ bfi10AnsweredCount }}/10)
+    </button>
+
+    <p v-if="!bfi10Complete" class="mt-3 text-sm text-gray-600">
+      请至少移动每个滑块一次以完成测试。
+    </p>
+  </div>
+</main>
+
+        <!-- Main Content -->
+        <main v-else-if="session === 'main'" class="container mx-auto px-6 py-12">
+            <div class="grid lg:grid-cols-10 gap-8">
+                <!-- Left Panel: Preferences  -->
+                <div class="lg:col-span-3 space-y-6">
+                    <div class="left-panel rounded-3xl p-8 space-y-6 animate-fade-in">
+                        <!-- 大标题：Preference -->
+                        <h2 class="text-3xl font-bold gradient-text mb-6 flex items-center">
+                            <i class="fa fa-sliders text-primary mr-3 text-xl"></i>
+                            偏好
+                        </h2>
+
+                        <!-- 第一行：Trip Duration (Days) -->
+                        <div class="space-y-3">
+                            <label class="block text-base font-semibold text-gray-800 flex items-center">
+                                <i class="fa fa-calendar text-primary mr-3"></i>
+                                想要旅行多少天？
+                            </label>
+                            <div class="relative">
+                                <input type="number" 
+                                       v-model.number="formData.days"
+                                       min="1" 
+                                       max="30" 
+                                       class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-3 focus:ring-primary/20 focus:border-primary transition-all duration-300 shadow-sm hover:shadow-md text-base bg-white">
+                                <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                    <i class="fa fa-calendar-days text-lg"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 分界线 -->
+                        <div class="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent my-4"></div>
+
+                        <!-- Travel Preference 小标题 -->
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+                                <i class="fa fa-heart text-primary mr-3"></i>
+                                更喜欢...
+                            </h3>
+                            
+                            <!-- 滑杆1: Spontaneity vs Planning -->
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-gray-700">计划</span>
+                                    <span class="text-sm font-medium text-gray-700">随性</span>
+                                </div>
+                                <input type="range" 
+                                       v-model.number="formData.spontaneity"
+                                       min="0" 
+                                       max="1" 
+                                       step="0.1" 
+                                       class="w-full custom-slider">
+                                <div class="text-center">
+                                    <span class="inline-block px-3 py-1 bg-white text-gray-800 font-semibold rounded-lg text-base shadow-sm border border-gray-200">{{ formData.spontaneity.toFixed(1) }}</span>
+                                </div>
+                            </div>
+
+                            <!-- 滑杆2: Novelty vs Familiarity -->
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-gray-700">熟悉感</span>
+                                    <span class="text-sm font-medium text-gray-700">新鲜感</span>
+                                </div>
+                                <input type="range" 
+                                       v-model.number="formData.novelty"
+                                       min="0" 
+                                       max="1" 
+                                       step="0.1" 
+                                       class="w-full custom-slider">
+                                <div class="text-center">
+                                    <span class="inline-block px-3 py-1 bg-white text-gray-800 font-semibold rounded-lg text-base shadow-sm border border-gray-200">{{ formData.novelty.toFixed(1) }}</span>
+                                </div>
+                            </div>
+
+                            <!-- 滑杆3: Hedonic Enjoyment vs Meaningful Enrichment -->
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-gray-700">意义收获</span>
+                                    <span class="text-sm font-medium text-gray-700">即时享乐</span>
+                                </div>
+                                <input type="range" 
+                                       v-model.number="formData.hedonic"
+                                       min="0" 
+                                       max="1" 
+                                       step="0.1" 
+                                       class="w-full custom-slider">
+                                <div class="text-center">
+                                    <span class="inline-block px-3 py-1 bg-white text-gray-800 font-semibold rounded-lg text-base shadow-sm border border-gray-200">{{ formData.hedonic.toFixed(1) }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 分界线 -->
+                        <div class="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent my-4"></div>
+
+                        <!-- Your Recent Status 小标题 -->
+                        <div class="space-y-6">
+                            <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+                                <i class="fa fa-bolt text-primary mr-3"></i>
+                                你最近的状态
+                            </h3>
+                            
+                            <!-- 滑杆4: Tired vs Energetic -->
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-gray-700">精力充沛</span>
+                                    <span class="text-sm font-medium text-gray-700">感到疲惫</span>
+                                </div>
+                                <input type="range" 
+                                       v-model.number="formData.tired"
+                                       min="0" 
+                                       max="1" 
+                                       step="0.1" 
+                                       class="w-full custom-slider">
+                                <div class="text-center">
+                                    <span class="inline-block px-3 py-1 bg-white text-gray-800 font-semibold rounded-lg text-base shadow-sm border border-gray-200">{{ formData.tired.toFixed(1) }}</span>
+                                </div>
+                            </div>
+
+                            <!-- 滑杆5: Anxious vs Relaxed -->
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-gray-700">心情放松</span>
+                                    <span class="text-sm font-medium text-gray-700">焦虑</span>
+                                </div>
+                                <input type="range" 
+                                       v-model.number="formData.anxious"
+                                       min="0" 
+                                       max="1" 
+                                       step="0.1" 
+                                       class="w-full custom-slider">
+                                <div class="text-center">
+                                    <span class="inline-block px-3 py-1 bg-white text-gray-800 font-semibold rounded-lg text-base shadow-sm border border-gray-200">{{ formData.anxious.toFixed(1) }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 分界线 -->
+                        <div class="w-full h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent my-4"></div>
+
+                        <!-- Personality (Optional) 小标题 -->
+                        <div id="personality-section" class="space-y-4">
+                            <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+                                <i class="fa fa-user-circle text-primary mr-3"></i>
+                                人格特质测试结果
+                            </h3>
+                            
+                            <!-- 如果想要重做测试 -->
+                            <button type="button"
+  class="block w-full text-center py-3 bg-white text-primary hover:bg-gray-50 transition-all duration-300 text-base font-semibold rounded-xl border border-primary/30 hover:border-primary/50 shadow-sm"
+  @click="session='bfi10'"
+>
+  → 重新进行大五人格测试
+</button>
+
+
+                            <!-- 5个输入框: Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism -->
+                            <div class="grid grid-cols-1 gap-3">
+                                <div class="space-y-1">
+                                    <label class="text-sm font-medium text-gray-700">开放性:</label>
+                                    <input type="number" 
+                                           v-model.number="personality.openness"
+                                           min="0" 
+                                           max="1" 
+                                           step="0.1"
+                                           placeholder="0.0-1.0" 
+                                           class="personality-input w-full px-3 py-2 text-sm bg-white">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-sm font-medium text-gray-700">尽责性:</label>
+                                    <input type="number" 
+                                           v-model.number="personality.conscientiousness"
+                                           min="0" 
+                                           max="1" 
+                                           step="0.1"
+                                           placeholder="0.0-1.0" 
+                                           class="personality-input w-full px-3 py-2 text-sm bg-white">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-sm font-medium text-gray-700">外向性:</label>
+                                    <input type="number" 
+                                           v-model.number="personality.extraversion"
+                                           min="0" 
+                                           max="1" 
+                                           step="0.1"
+                                           placeholder="0.0-1.0" 
+                                           class="personality-input w-full px-3 py-2 text-sm bg-white">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-sm font-medium text-gray-700">宜人性:</label>
+                                    <input type="number" 
+                                           v-model.number="personality.agreeableness"
+                                           min="0" 
+                                           max="1" 
+                                           step="0.1"
+                                           placeholder="0.0-1.0" 
+                                           class="personality-input w-full px-3 py-2 text-sm bg-white">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-sm font-medium text-gray-700">神经质:</label>
+                                    <input type="number" 
+                                           v-model.number="personality.neuroticism"
+                                           min="0" 
+                                           max="1" 
+                                           step="0.1"
+                                           placeholder="0.0-1.0" 
+                                           class="personality-input w-full px-3 py-2 text-sm bg-white">
+                                </div>
+                            </div>
+                            
+                            <!-- Input Guide -->
+                            <div class="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                                <i class="fa fa-info-circle mr-1"></i>
+                                输入0-1之间的值
+                            </div>
+                        </div>
+
+                        <!-- Generate Itenery 按钮 -->
+                        <button @click="generateItinerary"
+                                :disabled="isGenerating"
+                                class="w-full generate-button text-white py-4 px-6 rounded-lg font-bold text-lg focus:outline-none focus:ring-4 focus:ring-primary/30 mt-4">
+                            <i v-if="isGenerating" class="fa fa-spinner fa-spin mr-3"></i>
+                            <i v-else class="fa fa-magic mr-3"></i>
+                            <span v-if="isGenerating">生成中...</span>
+                            <span v-else>生成行程</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Itinerary -->
+                <div class="lg:col-span-7">
+                    <div class="right-panel rounded-3xl p-8 animate-slide-up flex flex-col h-[calc(100vh-0px)] overflow-hidden">
+                        <!-- 标题：Itinerary -->
+                        <h2 class="text-3xl font-bold gradient-text mb-8 flex items-center">
+                            <i class="fa fa-map text-primary mr-3 text-xl"></i>
+                            定制行程
+                        </h2>
+                        <div class="flex-1 min-h-0 overflow-hidden flex flex-col">
+
+                        <!-- Loading State -->
+<div v-if="isLoading"
+     class="text-center py-20 flex-1 flex flex-col justify-center items-center">
+  <div class="animate-spin rounded-full h-20 w-20 border-4 border-primary/30 border-t-primary mb-6"></div>
+  <p class="text-xl text-gray-700 font-medium mb-2">正在定制专属行程…</p>
+  <p class="text-gray-500">受经费限制，速度有点慢😢，非常感谢您的耐心和支持！</p>
+</div>
+
+
+                        <!-- Empty State -->
+                        <div v-else-if="!itineraryData && !historyData" class="text-center py-20 flex-1 flex flex-col justify-center">
+                            <div class="w-32 h-32 bg-gradient-to-br from-primary/15 to-secondary/15 rounded-full flex items-center justify-center mx-auto mb-8">
+                                <i class="fa fa-compass text-primary text-4xl"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-4">你的旅行，从这里开始</h3>
+                            <p class="text-gray-600 text-lg mb-8 max-w-2xl mx-auto">
+                                调整你的偏好，让系统为你生成契合你人格与旅行风格的行程。
+                            </p>
+                            <div class="w-full max-w-md mx-auto rounded-2xl shadow-xl overflow-hidden">
+                                <div class="bg-gradient-to-r from-primary to-secondary p-6 text-white text-center">
+                                    <h4 class="font-bold text-lg mb-2">如何使用</h4>
+                                    <ol class="text-sm space-y-1 text-left">
+                                        <li>1. 设置你的旅行偏好和性格特征</li>
+                                        <li>2. 点击“生成行程”按钮</li>
+                                        <li>3. 稍候片刻，系统会为你规划专属行程</li>
+                                        <li>4. 查看行程，并与智能助手进行交流</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- History Data -->
+                        <!--显示用户的历史旅行数据，并为每个行程提供详细信息和查看功能-->
+                        <div v-else-if="historyData && !itineraryData" class="flex-1 min-h-0 overflow-y-auto pr-4">
+                            <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                                <i class="fa fa-history text-primary mr-3"></i>
+                                Your Travel History ({{ historyData.length }})
+                            </h3>
+                            <div class="space-y-6">
+                                <div v-for="(item, index) in historyData" :key="item._id" class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h4 class="text-lg font-bold text-gray-900">
+                                            {{ item.tripType }} Trip ({{ item.days }} Days)
+                                        </h4>
+                                        <span class="text-sm text-gray-500">{{ new Date(item.createdAt).toLocaleString() }}</span>
+                                    </div>
+                                    <div class="grid md:grid-cols-3 gap-4 mb-4">
+                                        <div class="bg-gray-50 rounded-lg p-3 text-center">
+                                            <div class="text-sm text-gray-500">Activities</div>
+                                            <div class="text-xl font-bold text-primary">{{ item.totalActivities }}</div>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-3 text-center">
+                                            <div class="text-sm text-gray-500">Personality Match</div>
+                                            <div class="text-xl font-bold text-purple-600">{{ item.matchPercentage }}%</div>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-3 text-center">
+                                            <div class="text-sm text-gray-500">Status</div>
+                                            <div class="text-xl font-bold text-green-600">Completed</div>
+                                        </div>
+                                    </div>
+                                    <button @click="loadHistoryItem(item)" class="w-full bg-primary/10 text-primary py-2 rounded-lg font-semibold hover:bg-primary/20 transition-colors duration-300">
+                                        展示细节
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- API Error State -->
+                        <div v-else-if="apiError" class="text-center py-20 flex-1 flex flex-col justify-center">
+                            <div class="w-32 h-32 bg-gradient-to-br from-red-15 to-red-15 rounded-full flex items-center justify-center mx-auto mb-8">
+                                <i class="fa fa-exclamation-triangle text-red-500 text-4xl"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-red-600 mb-4">API Call Failed</h3>
+                            <p class="text-gray-600 text-lg mb-4 max-w-2xl mx-auto">
+                                {{ apiError }}
+                            </p>
+                            <p class="text-gray-500 mb-6">请检查您的网络连接，然后再试一次。</p>
+                            <button @click="generateItinerary" class="bg-primary text-white px-8 py-3 rounded-xl font-semibold hover:bg-secondary transition-all duration-300">
+                                <i class="fa fa-refresh mr-2"></i>
+                                重试
+                            </button>
+                        </div>
+
+    <!-- Itinerary Results -->
+  <div v-if="itineraryData" class="flex-1 min-h-0 overflow-hidden flex flex-col">
+    <div class="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-2xl p-8 border border-primary/20 mb-8 flex-1 min-h-0 flex flex-col">
+      
+      <div class="flex items-center justify-between mb-6 shrink-0">
+        <h3 class="text-xl font-bold text-gray-900">行程总览</h3>
+        <button @click="copyItinerary" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors">
+          <i class="fa fa-copy mr-2"></i>复制
+        </button>
+        <button @click="goToSurvey"
+        class="bg-white border border-primary/40 text-primary px-4 py-2 rounded-lg hover:bg-primary/10 transition-colors">
+  <i class="fa fa-list-alt mr-2"></i>填写问卷
+</button>
+
+      </div>
+
+      <!-- 真正滚动的区域：必须 flex-1 min-h-0 overflow-y-auto -->
+      <!-- 左侧固定索引 + 右侧滚动内容 -->
+<div class="flex-1 min-h-0 flex gap-4">
+
+  <!-- 左侧：索引（固定不滚动） -->
+  <aside v-if="dayIndex.length" class="w-28 shrink-0">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-3">
+      <div class="text-xs font-semibold text-gray-500 mb-2">日期</div>
+
+      <div class="space-y-1">
+        <button
+          v-for="d in dayIndex"
+          :key="d.id"
+          @click="scrollToDay(d.id)"
+          class="w-full text-left px-2 py-2 rounded-lg text-sm font-semibold hover:bg-primary/10 hover:text-primary transition"
+        >
+          {{ d.label }}
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 右侧：只有这一列上下滚动 -->
+  <div ref="itineraryScroll" class="flex-1 min-h-0 overflow-y-auto pr-2">
+    <div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+      <div class="prose max-w-none">
+        <div id="itinerary-display-container" v-html="itineraryData"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+                        <!-- Chat Interface -->
+                        <div class="mt-4 border-t border-gray-200 pt-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                <i class="fa fa-comments text-primary mr-2"></i>
+                                与AI助手聊天
+                            </h3>
+                            
+                            <!-- Chat Messages -->
+                            <div class="space-y-4 mb-4 max-h-40 overflow-y-auto pr-2" id="chatMessages">
+                                <div v-for="message in chatMessages" :key="message._id || message.id" class="flex items-start space-x-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" :class="message.sender === 'user' ? 'bg-gray-600' : 'bg-primary'">
+                                        <i :class="message.sender === 'user' ? 'fa fa-user' : 'fa fa-robot'"></i>
+                                    </div>
+                                    <div class="chat-message" :class="message.sender === 'user' ? 'user-message' : 'ai-message'">
+                                        <p class="text-sm" v-html="message.message"></p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Typing Indicator -->
+                                <div v-if="isTyping" class="flex items-start space-x-3">
+                                    <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                        <i class="fa fa-robot"></i>
+                                    </div>
+                                    <div class="chat-message ai-message p-4">
+                                        <div class="typing-indicator">
+                                            <div class="typing-dot"></div>
+                                            <div class="typing-dot"></div>
+                                            <div class="typing-dot"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Chat Input -->
+                            <div class="relative">
+                                <input type="text" 
+                                       v-model="chatInput"
+                                       @keypress="handleChatKeyPress"
+                                       placeholder="询问我关于行程的任何问题…" 
+                                       class="chat-input w-full px-6 py-4 pl-12 text-gray-700 text-lg">
+                                <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                                    <i class="fa fa-comment text-xl"></i>
+                                </div>
+                                <button @click="sendChatMessage" class="absolute right-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white hover:bg-secondary transition-colors duration-300">
+                                    <i class="fa fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+           
+        </main>
+
+<!-- Survey -->
+<main v-else-if="session === 'survey'" class="container mx-auto px-6 py-12">
+  <div class="max-w-3xl mx-auto right-panel rounded-3xl p-8 animate-slide-up">
+    <h2 class="text-3xl font-bold gradient-text mb-2">问卷</h2>
+    <p class="text-gray-600 mb-8">请根据刚刚生成的行程填写。</p>
+
+<div class="space-y-6">
+
+  <!-- 统一说明 -->
+  <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+    <div class="font-semibold text-gray-900 mb-2">说明</div>
+    <div class="text-sm text-gray-600 leading-relaxed">
+      请根据您的实际感受，选择您对以下陈述的同意程度。
+    </div>
+  </div>
+
+  <!-- 14 Likert Questions -->
+  <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm"
+       v-for="item in surveyQuestions"
+       :key="item.k">
+
+    <div class="font-semibold text-gray-900 mb-3">
+      {{ item.no }}. {{ item.text }}
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
+      <label v-for="(t, i) in likertOptions"
+             :key="item.k + '_' + i"
+             class="flex items-center gap-2 text-sm bg-gray-50 rounded-lg px-3 py-2 border border-gray-200 hover:border-primary/40">
+        <input type="radio" :value="i+1" v-model.number="survey[item.k]">
+        <span>{{ t }}</span>
+      </label>
+    </div>
+
+    <p v-if="survey[item.k] === null" class="text-xs text-gray-400 mt-2">
+      请选择一个选项。
+    </p>
+  </div>
+
+</div>
+
+
+    <!-- 操作按钮 -->
+    <div class="flex gap-3 mt-8">
+      <button class="w-1/3 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200"
+              :disabled="surveySubmitting"
+              @click="backToMainFromSurvey">
+        返回
+      </button>
+
+      <button class="w-2/3 generate-button text-white py-3 rounded-xl font-bold"
+              :disabled="surveySubmitting"
+              @click="submitSurvey">
+        <i v-if="surveySubmitting" class="fa fa-spinner fa-spin mr-2"></i>
+        提交问卷
+      </button>
+    </div>
+
+    <p class="text-xs text-gray-500 mt-3">
+      提交后会保存到数据库，并返回到完成页面。
+    </p>
+  </div>
+</main>
+
+<!-- Survey Done -->
+<main v-else-if="session === 'survey_done'" class="container mx-auto px-6 py-12">
+  <div class="max-w-3xl mx-auto right-panel rounded-3xl p-8 animate-slide-up text-center">
+    <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
+      <i class="fa fa-check text-green-600 text-3xl"></i>
+    </div>
+
+    <h2 class="text-3xl font-bold gradient-text mb-2">问卷提交成功</h2>
+    <p class="text-gray-600 mb-8">谢谢！你的反馈已经保存。</p>
+
+    <div class="flex gap-3 justify-center">
+      <button
+        class="bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200"
+        @click="backToMainAfterSurvey"
+      >
+        返回行程页
+      </button>
+
+      <button
+        class="generate-button text-white py-3 px-6 rounded-xl font-bold"
+        @click="startNewTrip"
+      >
+        再生成一个行程
+      </button>
+    </div>
+  </div>
+</main>
+
+
+<!-- Footer -->
+<footer class="mt-20 bg-gray-900 text-white py-16">
+  <!-- 上半部分：只保留一栏（受 container 约束） -->
+  <div class="container mx-auto px-6">
+    <div class="space-y-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
+          <i class="fa fa-compass text-white"></i>
+        </div>
+        <span class="font-bold text-xl">个性化旅行助手</span>
+      </div>
+      <p class="text-gray-400">为每一个独一无二的你，打造专属行程规划。</p>
+    </div>
+  </div>
+
+  <!-- 下半部分：全宽底栏（不受 container 限制） -->
+  <div class="border-t border-gray-800 mt-12">
+    <div class="px-6 pt-8 text-center text-gray-400">
+      <p class="md:whitespace-nowrap">
+        &copy; Adaptive Travel Assistant
+        <span class="hidden md:inline"> | </span>
+        <span class="block md:inline">All rights reserved</span>
+      </p>
+    </div>
+  </div>
+</footer>
+
+
+
+        <!-- Mobile Menu Button -->
+        <button class="md:hidden fixed top-6 right-6 z-50 w-12 h-12 bg-white rounded-2xl shadow-lg flex items-center justify-center text-gray-700 hover:text-primary transition-all duration-300">
+            <i class="fa fa-bars text-xl"></i>
+        </button>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    likertOptions: [
+  '非常不同意',
+  '不同意',
+  '中立',
+  '同意',
+  '非常同意'
+],
+
+surveyQuestions: [
+  { no: 1,  k: 'q1',  text: '系统推荐的旅行行程符合我的兴趣。' },
+  { no: 2,  k: 'q2',  text: '系统推荐的旅行行程新颖且有趣。' },
+  { no: 3,  k: 'q3',  text: '系统推荐的旅游景点种类丰富。' },
+  { no: 4,  k: 'q4',  text: '系统有清晰解释为什么向我推荐这个行程。' },
+  { no: 5,  k: 'q5',  text: '推荐系统的界面布局美观且合理。' },
+  { no: 6,  k: 'q6',  text: '使用该系统寻找旅行计划非常方便。' },
+  { no: 7,  k: 'q7',  text: '推荐内容有效地帮助我制定了理想的行程。' },
+  { no: 8,  k: 'q8',  text: '在系统的帮助下，我感受到被支持去寻找自己喜欢的内容。' },
+  { no: 9,  k: 'q9',  text: '总体来说，我对这个系统感到满意。' },
+  { no: 10, k: 'q10', text: '我对系统的推荐感到信任。' },
+  { no: 11, k: 'q11', text: '我有信心自己会喜欢这个行程。' },
+  { no: 12, k: 'q12', text: '我愿意再次使用这个推荐系统。' },
+  { no: 13, k: 'q13', text: '我愿意向朋友推荐这个系统。' },
+  { no: 14, k: 'q14', text: '如果有机会，我愿意预订系统推荐的这趟旅行。' },
+],
+
+                    // 后端API配置
+                    backendUrl: 'http://localhost:3000/api',
+                    
+                    // 表单数据（完全按照要求的字段）
+                    formData: {
+                        days: 3,
+                        spontaneity: 0.5,
+                        novelty: 0.7,
+                        hedonic: 0.3,
+                        tired: 0.6,
+                        anxious: 0.4
+                    },
+                    
+                    // 人格数据
+                    personality: {
+                        openness: null,
+                        conscientiousness: null,
+                        extraversion: null,
+                        agreeableness: null,
+                        neuroticism: null
+                    },
+                    
+                    // 状态管理
+                    isGenerating: false,
+                    isLoading: false,
+                    itineraryData: null,
+                    apiError: null,
+                    historyData: null,
+                    dayIndex: [],
+
+                    // 聊天功能
+                    chatMessages: [
+                        {
+                            id: 1,
+                            sender: 'ai',
+                            message: '你好，我是你的旅行助手！'
+                        }
+                    ],
+                    chatInput: '',
+                    isTyping: false,
+                    surveySubmitting: false,
+
+survey: {
+  // 14 questions, each should be 1..5. Use null to force user choose.
+  q1: null,
+  q2: null,
+  q3: null,
+  q4: null,
+  q5: null,
+  q6: null,
+  q7: null,
+  q8: null,
+  q9: null,
+  q10: null,
+  q11: null,
+  q12: null,
+  q13: null,
+  q14: null
+},
+
+itineraryId: null,
+
+
+                    // ===== Session control =====
+session: 'bfi10', // 默认先进测试页；如果本地有缓存会在 created() 里切到 main
+
+// ===== BFI-10 Test State =====
+bfi10: {
+  answers: Array(10).fill(3),    // 1..5，默认中立3
+  touched: Array(10).fill(false),// 是否“动过”该滑杆
+  items: [
+    { id: 1,  text: '我是一个比较内向、含蓄的人', reverse: true },
+    { id: 2,  text: '我容易信任他人', reverse: false },
+    { id: 3,  text: '我有时比较懒散，缺乏行动力', reverse: true },
+    { id: 4,  text: '我通常比较放松，能够很好地应对压力', reverse: true },
+    { id: 5,  text: '我对艺术几乎没有兴趣', reverse: true },
+    { id: 6,  text: '我是一个外向、善于社交的人', reverse: false },
+    { id: 7,  text: '我认为自己比较挑剔，容易注意到他人的不足', reverse: true },
+    { id: 8,  text: '我做事认真、细致，追求把事情做好', reverse: false },
+    { id: 9,  text: '我比较容易感到紧张或焦虑', reverse: false },
+    { id: 10, text: '我认为自己富有想象力，思维活跃', reverse: false }
+  ]
+},
+
+                };
+            },
+            
+              created() {
+this.session = 'bfi10';
+  },
+
+  computed: {
+  bfi10AnsweredCount() {
+    return this.bfi10.touched.filter(Boolean).length;
+  },
+  bfi10Complete() {
+    return this.bfi10AnsweredCount === 10;
+  }
+},
+
+
+            
+methods: {
+
+backToMainAfterSurvey() {
+  this.session = 'main';
+  this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+},
+
+startNewTrip() {
+  this.session = 'main';
+  this.itineraryData = null;
+  this.itineraryId = null;
+
+  // 重置新问卷（q1..q14）
+  this.survey = {
+    q1: null, q2: null, q3: null, q4: null, q5: null, q6: null, q7: null,
+    q8: null, q9: null, q10: null, q11: null, q12: null, q13: null, q14: null
+  };
+
+  this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+},
+
+
+
+backToMainFromSurvey() {
+  this.session = 'main';
+  this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+},
+
+resetSurveyAndFillAgain() {
+  this.survey = {
+    q1: null, q2: null, q3: null, q4: null, q5: null, q6: null, q7: null,
+    q8: null, q9: null, q10: null, q11: null, q12: null, q13: null, q14: null
+  };
+  this.session = 'survey';
+  this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+},
+
+
+async submitSurvey() {
+  // 14题必答校验
+  const missing = [];
+  for (let i = 1; i <= 14; i++) {
+    const k = 'q' + i;
+    if (this.survey[k] === null || this.survey[k] === undefined) missing.push(i);
+  }
+  if (missing.length) {
+    alert('Please answer all questions before submitting. Missing: Q' + missing.join(', Q'));
+    return;
+  }
+
+  try {
+    this.surveySubmitting = true;
+
+    const anonId = this.getOrCreateAnonUserId();
+console.log('Submitting survey keys:', Object.keys(this.survey));
+console.log('Submitting survey payload:', this.survey);
+
+    const payload = {
+      itineraryId: this.itineraryId || null,
+      userId: anonId,
+      survey: { ...this.survey }
+    };
+
+    const resp = await axios.post(`${this.backendUrl}/save-survey`, payload, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (resp.data && resp.data.success) {
+      this.session = 'survey_done';
+      this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    } else {
+      alert('Submit failed: bad response format');
+    }
+  } catch (e) {
+  console.error('Submit survey failed FULL:', e);
+  console.error('Status:', e.response?.status);
+  console.error('Data:', e.response?.data);
+  alert('Submit failed: ' + (e.response?.data?.message || e.message || 'unknown'));
+}
+ finally {
+    this.surveySubmitting = false;
+  }
+},
+
+
+
+getOrCreateAnonUserId() {
+  const key = 'anon_user_id_v1';
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = 'user_' + Math.random().toString(16).slice(2) + '_' + Date.now();
+    localStorage.setItem(key, id);
+  }
+  return id;
+},
+
+
+            
+goToSurvey() {
+  if (!this.itineraryData) {
+    alert('请先生成行程，再填写问卷。');
+    return;
+  }
+  this.session = 'survey';
+  this.$nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+},
+
+createTemporaryDisplay(content) {
+    console.log("创建临时显示窗口");
+    
+    // 移除之前的临时窗口
+    const oldWindow = document.getElementById('temp-debug-window');
+    if (oldWindow) oldWindow.remove();
+    
+    // 创建新窗口
+    const debugWindow = document.createElement('div');
+    debugWindow.id = 'temp-debug-window';
+    debugWindow.innerHTML = `
+        <div style="position: fixed; top: 50px; left: 50px; width: 80%; height: 80%; background: white; border: 5px solid red; z-index: 99999; overflow: auto; padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+            <h2 style="color: red; margin-bottom: 20px;">调试窗口 - 行程内容</h2>
+            <div id="debug-content">${content}</div>
+            <button onclick="document.getElementById('temp-debug-window').remove()" style="position: absolute; top: 20px; right: 20px; padding: 10px 20px; background: red; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                关闭
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(debugWindow);
+    console.log("临时调试窗口已创建，应该能看到红色边框");
+},
+                createDebugWindow(content) {
+    // 移除之前的调试窗口
+    const oldDebug = document.getElementById('debug-window');
+    if (oldDebug) oldDebug.remove();
+    
+    // 创建新的调试窗口
+    const debugDiv = document.createElement('div');
+    debugDiv.id = 'debug-window';
+    debugDiv.innerHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 99999; overflow: auto; padding: 20px;">
+            <h2 style="color: red;">调试窗口 - 原始SSE数据</h2>
+            <button onclick="document.getElementById('debug-window').remove()" style="position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: red; color: white; border: none; border-radius: 5px;">关闭</button>
+            <pre style="background: #f0f0f0; padding: 20px; border-radius: 5px; max-height: 80vh; overflow: auto;">${this.escapeHtml(content)}</pre>
+        </div>
+    `;
+    
+    document.body.appendChild(debugDiv);
+},
+
+escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+},
+    // 复制行程内容
+copyItinerary() {
+    if (!this.itineraryData) return;
+    
+    // 从HTML中提取纯文本
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = this.itineraryData;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+    
+    navigator.clipboard.writeText(plainText).then(() => {
+        alert('行程已复制到剪贴板！');
+    }).catch(err => {
+        console.error('复制失败:', err);
+        // 如果剪贴板API不可用，使用传统方法
+        const textArea = document.createElement('textarea');
+        textArea.value = plainText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('行程已复制到剪贴板！');
+    });
+},
+
+buildDayIndex() {
+  this.dayIndex = [];
+
+  const root = document.getElementById('itinerary-display-container');
+  if (!root) return;
+
+  // 你的“第一天/第二天/第三天”是 h2，并且自带 id
+  const h2s = root.querySelectorAll('h2[id]');
+  const items = [];
+
+  h2s.forEach(h2 => {
+    const title = (h2.textContent || '').trim();
+    const m = title.match(/^第([一二三四五六七八九十百0-9]+)天/);
+    if (m) {
+      items.push({
+        id: h2.id,
+        label: m[0]   // 显示 “第一天”
+        // 如果你想显示完整标题，用：label: title
+      });
+    }
+  });
+
+  this.dayIndex = items;
+},
+
+scrollToDay(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+},
+
+
+onBfi10Input(idx) {
+  this.$set(this.bfi10.touched, idx, true);
+},
+
+calcBfi10RawScores() {
+  const a = this.bfi10.answers; // 0..9
+  const rev = x => 6 - x;       // 1..5 的反向计分：6-x
+
+  // 反向题：1,3,4,5,7
+  const q1  = rev(a[0]);
+  const q2  = a[1];
+  const q3  = rev(a[2]);
+  const q4  = rev(a[3]);
+  const q5  = rev(a[4]);
+  const q6  = a[5];
+  const q7  = rev(a[6]);
+  const q8  = a[7];
+  const q9  = a[8];
+  const q10 = a[9];
+
+  const E = (q1 + q6) / 2;
+  const A = (q2 + q7) / 2;
+  const C = (q3 + q8) / 2;
+  const N = (q4 + q9) / 2;
+  const O = (q5 + q10) / 2;
+
+  return { E, A, C, N, O }; // 1..5
+},
+
+
+finishBfi10() {
+  if (!this.bfi10Complete) {
+    alert('Please complete all 10 questions before finishing.');
+    return;
+  }
+
+  const raw = this.calcBfi10RawScores();
+
+  // 1..5 -> 0..1 归一化
+  const norm = x => Number(((x - 1) / 4).toFixed(2));
+
+  const scores01 = {
+    E: norm(raw.E),
+    A: norm(raw.A),
+    C: norm(raw.C),
+    N: norm(raw.N),
+    O: norm(raw.O),
+  };
+
+  // 写入你现有的 personality 输入框
+  this.personality.openness = scores01.O;
+  this.personality.conscientiousness = scores01.C;
+  this.personality.extraversion = scores01.E;
+  this.personality.agreeableness = scores01.A;
+  this.personality.neuroticism = scores01.N;
+
+  // 缓存（下次进来直接跳过测试）
+  localStorage.setItem('bfi10_scores_v1', JSON.stringify(scores01));
+
+  // 切到主页面
+  this.session = 'main';
+
+  // 可选：跳到 Personality 区域（需要第7步加id）
+  this.$nextTick(() => {
+    const el = document.getElementById('personality-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+},
+
+                // 生成行程（调用Coze API）
+                async generateItinerary() {
+                    try {
+                        this.isGenerating = true;
+                        this.isLoading = true;
+                        this.itineraryData = null;
+                        this.apiError = null;
+                        this.historyData = null;
+
+                        // 验证输入数据
+                        const validation = this.validateInputData();
+                        if (!validation.valid) {
+                            alert(validation.message);
+                            this.isGenerating = false;
+                            this.isLoading = false;
+                            return;
+                        }
+
+                        // 添加生成消息到聊天
+                        this.addChatMessage('AI Assistant', '我正在分析您的偏好，并为您生成个性化的行程安排……', 'ai');
+
+                        // 准备API请求数据
+                        const requestData = {
+                            days: this.formData.days,
+                            e_tired: this.formData.tired,        
+                            e_anxious: this.formData.anxious,    
+                            e_curious: this.formData.novelty,    
+                            u_profile: {
+                                b5: [
+                                    this.personality.openness,
+                                    this.personality.conscientiousness,
+                                    this.personality.extraversion,
+                                    this.personality.agreeableness,
+                                    this.personality.neuroticism
+                                ],
+                                p: [
+                                    this.formData.spontaneity,
+                                    this.formData.novelty,
+                                    this.formData.hedonic
+                                ]
+                            }
+                        };
+
+                       // 调用后端API（转发到Coze API）
+const response = await axios.post(`${this.backendUrl}/generate-itinerary`, requestData, {
+    headers: { 'Content-Type': 'application/json' }
+});
+console.log("API返回数据:", response.data);
+this.itineraryId = response.data.itineraryId || null;
+
+
+// 获取行程内容
+let itineraryContent = response.data.itinerary.final_itinerary;
+console.log("itineraryContent类型:", typeof itineraryContent, "内容预览:", itineraryContent.substring(0, 200) + "...");
+
+// 解析SSE格式的数据流
+if (typeof itineraryContent === 'string') {
+    try {
+        console.log("开始解析SSE数据流，总长度:", itineraryContent.length);
+        
+        // 使用正则表达式查找所有 content 字段
+        let markdownContent = null;
+        const regex = /"content":"(.*?)"/g;
+        const matches = [];
+        let match;
+        
+        while ((match = regex.exec(itineraryContent)) !== null) {
+            if (match[1] && match[1].trim() !== '' && match[1] !== '{}') {
+                matches.push(match[1]);
+            }
+        }
+        
+        console.log("找到", matches.length, "个content字段");
+        
+        // 取最后一个非空的 content（通常是最终结果）
+        if (matches.length > 0) {
+            // 获取最后一个content（通常是最完整的行程内容）
+            markdownContent = matches[matches.length - 1];
+            console.log("使用最后一个content，长度:", markdownContent.length);
+            
+            // 处理转义字符
+            markdownContent = markdownContent
+                .replace(/\\u0026/g, '&') 
+                .replace(/\\n/g, '\n')
+                .replace(/\\"/g, '"')
+                .replace(/\\'/g, "'")
+                .replace(/\\\\/g, '\\');
+            
+            console.log("处理后的内容预览:", markdownContent.substring(0, 200) + "...");
+        } else {
+            console.warn("没有找到有效的content字段");
+        }
+        
+        // 如果成功提取到内容
+        if (markdownContent) {
+            // 将Markdown转换为HTML
+            this.itineraryData = marked.parse(markdownContent);
+            console.log("行程数据已设置，长度:", this.itineraryData.length);
+            console.log(this.itineraryData)
+            
+            // 确保Vue更新视图
+            this.$nextTick(() => {
+    console.log("Vue视图已更新");
+    
+    // 测试是否真的渲染到了DOM
+    const testElement = document.getElementById('itinerary-display-container');
+    if (testElement) {
+        console.log("找到行程显示元素");
+        console.log("元素内容长度:", testElement.innerHTML.length);
+        
+        // 强制显示以确保可见
+        testElement.style.cssText = `
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            height: auto !important;
+            color: #333 !important;
+            background: transparent !important;
+            position: relative !important;
+            z-index: 100 !important;
+        `;
+        
+    } else {
+        console.log("未找到行程显示元素，可能需要检查HTML结构");
+    }
+    this.buildDayIndex();
+
+});
+            
+            // 创建调试窗口显示原始数据
+            this.createDebugWindow(this.itineraryData);
+            
+        }
+    } catch (error) {
+        console.error("解析行程内容失败:", error);
+        this.apiError = "解析行程内容失败: " + error.message;
+    }
+} else {
+    console.log("itineraryContent是对象类型:", itineraryContent);
+    if (itineraryContent && itineraryContent.content) {
+        this.itineraryData = marked.parse(itineraryContent.content);
+    } else {
+        this.apiError = "行程数据格式错误";
+    }
+}
+this.isLoading = false;
+
+                        // 添加成功消息到聊天
+                        this.addChatMessage('AI Assistant', '已成功为你生成个性化行程！你可以在上方查看，并询问我任何问题。', 'ai');
+
+                    } catch (error) {
+                        console.error('生成行程错误:', error);
+
+                        // 判断错误类型
+                        if (error.response) {
+                            // 后端返回的错误
+                            if (error.response.status === 400) {
+                                // 例如数据验证错误
+                                this.apiError = `输入错误：${error.response.data.message}`;
+                            } else {
+                                // 其他 API 错误
+                                this.apiError = `API 错误：${error.response.data.message || '无法生成行程'}`;
+                            }
+                        } else if (error.request) {
+                            // 网络错误
+                            this.apiError = '网络错误：无法连接到服务器，请检查网络连接';
+                        } else {
+                            // 其他错误
+                            this.apiError = `未知错误：${error.message}`;
+                        }
+
+                        this.isLoading = false;
+                    } finally {
+                        this.isGenerating = false;
+                        this.isLoading = false;
+                    }
+                },
+
+                // 验证输入数据
+                validateInputData() {
+                    // 验证天数
+                    if (!this.formData.days || this.formData.days < 1 || this.formData.days > 7) {
+                        return {
+                            valid: false,
+                            message: '请输入 1 至 7 天之间的有效旅行天数。'
+                        };
+                    }
+
+                    // 验证滑杆值
+                    const sliderFields = ['spontaneity', 'novelty', 'hedonic', 'tired', 'anxious'];
+                    for (const field of sliderFields) {
+                        if (this.formData[field] === undefined || this.formData[field] < 0 || this.formData[field] > 1) {
+                            return {
+                                valid: false,
+                                message: '所有滑块的数值必须介于 0.0 到 1.0 之间。'
+                            };
+                        }
+                    }
+
+                    // 验证人格数据（如果填写了的话）
+                    const personalityFields = ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism'];
+                    for (const field of personalityFields) {
+                        if (this.personality[field] !== null && (isNaN(this.personality[field]) || this.personality[field] < 0 || this.personality[field] > 1)) {
+                            return {
+                                valid: false,
+                                message: '人格特质测试结果必须在 0.0 到 1.0 之间。'
+                            };
+                        }
+                    }
+
+                    return { valid: true };
+                },
+
+                // 保存用户配置
+                async saveProfile() {
+                    try {
+                        const profileData = {
+                            formData: this.formData,
+                            personality: this.personality,
+                            createdAt: new Date()
+                        };
+
+                        await axios.post(`${this.backendUrl}/save-profile`, profileData, {
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        alert('Profile saved successfully!');
+                        this.addChatMessage('AI Assistant', 'Your preferences have been saved successfully!', 'ai');
+
+                    } catch (error) {
+                        console.error('Error saving profile:', error);
+                        alert('Failed to save profile: ' + (error.response?.data?.message || 'Unknown error'));
+                    }
+                },
+
+                // 获取历史行程
+                async getHistory() {
+                    try {
+                        this.isLoading = true;
+                        const response = await axios.get(`${this.backendUrl}/itinerary-history`);
+                        this.historyData = response.data;
+                        this.itineraryData = null;
+                        this.isLoading = false;
+                    } catch (error) {
+                        console.error('Error fetching history:', error);
+                        this.apiError = 'Failed to fetch itinerary history';
+                        this.isLoading = false;
+                    }
+                },
+
+                // 加载历史行程
+                loadHistoryItem(item) {
+                    this.itineraryData = item.final_itinerary; // 加载历史行程的具体内容
+                    this.historyData = null;
+                    this.addChatMessage('AI Assistant', '已加载您的过往行程。', 'ai');
+                },
+
+                // 聊天功能
+async sendChatMessage() {
+    const message = this.chatInput.trim();
+    if (!message) return;
+    if (!this.itineraryData) {
+        this.addChatMessage('AI Assistant', '请先生成行程，再进行提问哦～', 'ai');
+        return;
+    }
+
+    this.addChatMessage('You', message, 'user');
+    this.chatInput = '';
+
+    this.isTyping = true;
+
+    try {
+        // 从HTML中提取纯文本内容
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = this.itineraryData;
+        const plainText = tempDiv.textContent || tempDiv.innerText || '';
+        
+        // 如果纯文本过长，截取前2000个字符（防止超出token限制）
+        const trimmedText = plainText.length > 2000 ? 
+            plainText.substring(0, 2000) + '...' : 
+            plainText;
+
+        console.log("发送到聊天API的行程文本（前200字符）:", trimmedText.substring(0, 200));
+
+        const response = await axios.post(`${this.backendUrl}/chat`, {
+            message: message,
+            itineraryText: trimmedText,
+            conversationId: this.conversationId,
+            userId: 'user_' + Date.now()
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        this.isTyping = false;
+        
+        if (response.data.success && response.data.reply) {
+            this.addChatMessage('AI Assistant', response.data.reply, 'ai');
+            this.conversationId = response.data.conversation_id;
+        } else {
+            this.addChatMessage('AI Assistant', '回复似乎是空白的，请再试一次。', 'ai');
+        }
+
+    } catch (error) {
+        console.error('聊天错误:', error);
+        this.isTyping = false;
+        
+        let errorMessage = '抱歉，我遇到了一个错误。请再试一次。';
+        if (error.response) {
+            errorMessage = `API Error: ${error.response.data?.message || 'Unknown error'}`;
+        } else if (error.request) {
+            errorMessage = '网络错误。请检查您的网络连接。';
+        }
+        
+        this.addChatMessage('AI Assistant', errorMessage, 'ai');
+    }
+}
+,
+
+                handleChatKeyPress(e) {
+                    if (e.key === 'Enter') {
+                        this.sendChatMessage();
+                    }
+                },
+
+                addChatMessage(sender, message, type) {
+                    const formattedContent = message.replace(/\n/g, '<br>');
+                    this.chatMessages.push({
+                        id: Date.now(),
+                        sender: type,
+                        message: formattedContent
+                    });
+                    
+                    // 滚动到底部
+                    setTimeout(() => {
+                        const chatContainer = document.querySelector('#chatMessages');
+                        if (chatContainer) {
+                            chatContainer.scrollTop = chatContainer.scrollHeight;
+                        }
+                    }, 100);
+                },
+
+                // 辅助函数
+                getTypeColor(type) {
+                    const typeColors = {
+                        adventurous: 'bg-green-100 text-green-700',
+                        cultural: 'bg-purple-100 text-purple-700',
+                        relaxing: 'bg-blue-100 text-blue-700',
+                        social: 'bg-pink-100 text-pink-700',
+                        structured: 'bg-yellow-100 text-yellow-700',
+                        flexible: 'bg-indigo-100 text-indigo-700',
+                        balanced: 'bg-gray-100 text-gray-700'
+                    };
+                    return typeColors[type.toLowerCase()] || 'bg-gray-100 text-gray-700';
+                },
+
+                getActivityTime(activityNumber) {
+                    const times = ['8:00 AM', '10:30 AM', '1:00 PM', '3:30 PM', '6:00 PM'];
+                    return times[activityNumber - 1] || 'TBA';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
