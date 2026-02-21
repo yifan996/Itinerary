@@ -387,6 +387,15 @@ console.log(`[总结] 共处理 ${eventCount} 个事件，最终提取内容: �
     }
 });
 
+const path = require('path');
+
+// 提供前端静态文件
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// 访问根路径返回 index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
 
 // 启动服务器
 app.listen(PORT, () => {
