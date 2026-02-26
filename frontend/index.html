@@ -1330,7 +1330,10 @@ if (typeof itineraryContent === 'string') {
                 .replace(/\\n/g, '\n')
                 .replace(/\\"/g, '"')
                 .replace(/\\'/g, "'")
-                .replace(/\\\\/g, '\\');
+                .replace(/\\\\/g, '\\')
+                .replace(/\\u([0-9A-Fa-f]{4})/g, (match, p1) => String.fromCharCode(parseInt(p1, 16)))
+                .replace(/\\u003c/g, '<')   // < 字符
+                .replace(/\\u003e/g, '>')   // > 字符
             
             console.log("处理后的内容预览:", markdownContent.substring(0, 200) + "...");
         } else {
